@@ -1,0 +1,22 @@
+---
+description: General clean-code rules for all files
+alwaysApply: true
+---
+
+Write clear, boring, maintainable code.
+
+Rules:
+- Prefer simple code over clever abstractions.
+- Keep functions small.
+- Use descriptive names.
+- Avoid duplicated logic.
+- Avoid deep nesting.
+- Keep side effects isolated.
+- Do not rewrite unrelated code.
+- Do not introduce new dependencies unless clearly justified.
+- Do not hide failures.
+- Do not remove error handling only to simplify code.
+- When uncertain, choose readability.
+
+For deeper review, see rule 006 and `.cursor/rules/external/ciembor/clean-code.mini.md`.
+For design depth principles, see `.cursor/rules/external/ciembor/philosophy-of-software-design.mini.md`.

@@ -1,0 +1,22 @@
+---
+description: React and TypeScript rules
+globs:
+  - "src/**/*.{ts,tsx}"
+  - "playground/src/**/*.{ts,tsx}"
+alwaysApply: true
+---
+
+React and TypeScript rules:
+- Use strict TypeScript.
+- Avoid `any`.
+- Export types for public component props.
+- Keep components focused and small.
+- Prefer named exports.
+- Avoid unnecessary global state.
+- Avoid browser-only APIs without guards in package code.
+- Keep React and React DOM as peer dependencies.
+- Do not bundle React into the library.
+- Test component behavior with React Testing Library.
+
+For React performance patterns, see `.cursor/rules/external/tech-leads-club/react-best-practices.md`.
+For Node.js security in TypeScript files, see `.cursor/rules/external/security/secure-dev-node.mdc`.

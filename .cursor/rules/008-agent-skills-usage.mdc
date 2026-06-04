@@ -1,0 +1,15 @@
+---
+description: How to use installed project skills
+alwaysApply: true
+---
+
+This repo includes optional skills in `.cursor/skills/`.
+
+Use skills only when relevant:
+- `coding-guidelines` for implementation tasks, code changes, bug fixes, or feature development
+- `clean-code-review` for readability review
+- `refactoring-pass` for behavior-preserving refactoring
+- `security-review` for risky code, dependencies, scripts, HTML rendering, or publishing
+
+Do not load or apply every skill globally.
+Do not run scripts from third-party skills unless the user explicitly approves.

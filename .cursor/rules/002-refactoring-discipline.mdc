@@ -1,0 +1,17 @@
+---
+description: Refactoring discipline for safe agent changes
+alwaysApply: true
+---
+
+When refactoring:
+- Preserve behavior unless the task explicitly asks to change it.
+- Make one conceptual change at a time.
+- Prefer incremental improvement over full rewrites.
+- Keep public exports stable.
+- Update tests when behavior changes.
+- Do not rename files, exports or APIs without a clear reason.
+- After refactoring, run typecheck and relevant tests.
+- Explain what changed and what was intentionally left unchanged.
+
+For dedicated refactoring passes, see rule 007 and `.cursor/rules/external/ciembor/refactoring.mini.md`.
+For architecture-level refactoring, see `.cursor/rules/external/ciembor/clean-architecture.mini.md`.

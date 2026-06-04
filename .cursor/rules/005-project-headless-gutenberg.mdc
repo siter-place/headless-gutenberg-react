@@ -1,0 +1,30 @@
+---
+description: Project-specific rules for @siter/headless-gutenberg-react
+alwaysApply: true
+---
+
+This package will become a React renderer for headless WordPress Gutenberg content.
+
+Current phase:
+- Build only the foundation.
+- Create HelloWorld component.
+- Do not implement full GutenbergRenderer yet.
+- Do not implement WordPress fetching yet.
+- Do not implement DOMPurify sanitization yet unless a later task asks for it.
+- Do not implement WordPress Interactivity API yet.
+
+Long-term architecture:
+- WordPress-rendered HTML is the source of truth.
+- The React package should render, sanitize and hydrate; it should not recreate Gutenberg blocks as React components.
+- Generated CSS will come from `siter_headless.css_urls`.
+- Wrapper class will come from `siter_headless.wrapper`.
+- Interactive blocks will later load WordPress script modules from the WordPress site.
+
+Testing:
+- Use Vitest for unit tests.
+- Use React Testing Library for component behavior.
+- Use Playwright for playground/browser behavior.
+- Use web-first Playwright assertions.
+
+For security review of HTML rendering, CSS/script loading, or publishing changes, invoke the `security-review` skill.
+For coding task quality, invoke the `coding-guidelines` skill per rule 008.

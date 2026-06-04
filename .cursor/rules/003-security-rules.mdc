@@ -1,0 +1,38 @@
+---
+description: Security rules for AI-assisted package development
+alwaysApply: true
+---
+
+Security rules:
+
+Secrets and credentials:
+- Never commit secrets, tokens, passwords, API keys or private URLs.
+- Never add secrets to examples.
+- Never hardcode credentials in source files, configuration, or scripts.
+
+Input and output:
+- Never use raw user input directly in file access, command execution, or database queries.
+- Validate inputs from users, external APIs, or third-party systems before use.
+- Avoid executing dynamically constructed code or expressions at runtime.
+
+Logging and exposure:
+- Never log sensitive values such as credentials, tokens, or personal identifiers.
+- Do not expose secrets in frontend code, public repositories, or client-distributed files.
+
+Dependencies and commands:
+- Do not add packages with unclear purpose.
+- Prefer maintained dependencies.
+- Do not run destructive shell commands.
+
+Security controls:
+- Do not disable security-related checks without documented justification.
+- Use only secure protocols (HTTPS, TLS) for external communications.
+
+HTML and rendering (project-specific):
+- Treat HTML rendering as unsafe by default.
+- Future Gutenberg HTML rendering must use sanitization before `dangerouslySetInnerHTML`.
+- Future CSS and script loading must validate expected inputs and avoid duplicate injection.
+
+External rules and skills:
+- Review external rules and skills before using them.
+- Do not run scripts from third-party skills automatically.

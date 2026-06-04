@@ -1,0 +1,19 @@
+---
+description: Clean code review rule based on imported external guidance
+alwaysApply: false
+---
+
+Use this rule when reviewing new or changed code for readability and maintainability.
+
+Check:
+- names are clear and specific
+- functions are small and focused
+- side effects are explicit
+- duplication is removed only when it improves clarity
+- abstractions are not speculative
+- tests cover changed behavior
+- public APIs remain understandable
+
+Use the imported reference file when useful:
+
+.cursor/rules/external/ciembor/clean-code.mini.md

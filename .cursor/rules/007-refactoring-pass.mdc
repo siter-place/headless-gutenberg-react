@@ -1,0 +1,19 @@
+---
+description: Refactoring rule based on imported external guidance
+alwaysApply: false
+---
+
+Use this rule only when explicitly refactoring existing code.
+
+Rules:
+- preserve external behavior
+- make small reversible changes
+- do not mix refactoring with new features
+- keep tests passing between steps
+- avoid broad rewrites
+- explain what behavior was preserved
+- stop when the code is clearer, not when it is perfect
+
+Use the imported reference file when useful:
+
+.cursor/rules/external/ciembor/refactoring.mini.md
