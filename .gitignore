@@ -10,3 +10,4 @@ test-results
 .idea
 .vscode
 playground/dist
+.package-lock.json
