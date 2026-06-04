@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 test('loads WordPress content via proxy', async ({ page }) => {
+  test.skip(!!process.env.CI, 'Requires local WordPress instance');
+
   await page.goto('/');
 
   await expect(
