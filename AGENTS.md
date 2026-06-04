@@ -4,18 +4,19 @@ This repository contains a public npm React + TypeScript package for rendering W
 
 ## Current Phase
 
-We are currently in Phase 1.
+All phases (1--8) are implemented.
 
-Phase 1 goal:
-- scaffold the project
-- set up coding-agent rules
-- set up documentation
-- set up TypeScript, build, linting and tests
-- set up a Vite playground
-- set up Playwright
-- create only a simple HelloWorld component
-
-Do not implement the full Gutenberg renderer yet.
+The package includes:
+- GutenbergRenderer component with HTML sanitization
+- WordPressPageRenderer convenience component
+- useWordPressContent hook for REST API fetching
+- useHeadlessAssets hook for CSS link injection
+- useInteractiveBlocks hook for WordPress Interactivity API
+- DOMPurify sanitization preserving data-wp-* attributes
+- Vite playground with local WordPress proxy
+- Unit tests (Vitest + React Testing Library)
+- E2E tests (Playwright) with live WordPress data
+- GitHub Actions CI and npm publish workflows
 
 ## Long-Term Product Goal
 

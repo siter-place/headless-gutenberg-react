@@ -6,12 +6,9 @@ alwaysApply: true
 This package will become a React renderer for headless WordPress Gutenberg content.
 
 Current phase:
-- Build only the foundation.
-- Create HelloWorld component.
-- Do not implement full GutenbergRenderer yet.
-- Do not implement WordPress fetching yet.
-- Do not implement DOMPurify sanitization yet unless a later task asks for it.
-- Do not implement WordPress Interactivity API yet.
+- All phases (1--8) are implemented.
+- GutenbergRenderer, WordPressPageRenderer, sanitization, CSS loading, REST fetching, and interactivity are all in place.
+- Focus on stability, testing, and incremental improvements.
 
 Long-term architecture:
 - WordPress-rendered HTML is the source of truth.
