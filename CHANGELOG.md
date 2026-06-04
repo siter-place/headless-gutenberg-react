@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0
+## 1.0.0
 
 Full implementation of the headless Gutenberg React renderer:
 

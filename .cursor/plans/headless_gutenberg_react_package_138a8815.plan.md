@@ -299,7 +299,7 @@ The root `dev` script should run the playground via Vite.
 - Security/sanitization notes
 - Publishing instructions
 
-**File:** `CHANGELOG.md` -- initial 0.1.0 entry
+**File:** `CHANGELOG.md` -- initial 1.0.0 entry
 
 ---
 

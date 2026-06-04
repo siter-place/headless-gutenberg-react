@@ -1,6 +1,6 @@
 {
   "name": "@siter/headless-gutenberg-react",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "React renderer foundation for headless WordPress Gutenberg content.",
   "type": "module",
   "license": "MIT",
