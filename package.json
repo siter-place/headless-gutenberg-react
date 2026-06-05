@@ -5,6 +5,10 @@
   "type": "module",
   "license": "MIT",
   "author": "Siter",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/siter-place/headless-gutenberg-react"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
