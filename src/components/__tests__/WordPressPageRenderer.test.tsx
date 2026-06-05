@@ -6,7 +6,7 @@ import type { WordPressRenderedContent } from '../../types/wordpress';
 const mockPost: WordPressRenderedContent = {
   id: 1,
   title: { rendered: 'Test Page' },
-  content: { rendered: '<p>Page content here</p>', protected: false },
+  content: { rendered: '<p>Content field HTML</p>', protected: false },
   excerpt: { rendered: '<p>Excerpt</p>', protected: false },
   siter_headless: {
     wrapper: '.wp-gutenberg-content',
@@ -19,6 +19,15 @@ const mockPost: WordPressRenderedContent = {
     theme: 'twentytwentyfive',
     wp_version: '7.0',
     error_message: null,
+    rendered_html: '<p>Rendered HTML from siter_headless</p>',
+  },
+};
+
+const mockPostNoRenderedHtml: WordPressRenderedContent = {
+  ...mockPost,
+  siter_headless: {
+    ...mockPost.siter_headless,
+    rendered_html: undefined,
   },
 };
 
@@ -41,7 +50,7 @@ describe('WordPressPageRenderer', () => {
     expect(screen.getByTestId('loading')).toBeInTheDocument();
   });
 
-  it('renders fetched content', async () => {
+  it('uses rendered_html by default', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify(mockPost), { status: 200 })
     );
@@ -55,7 +64,47 @@ describe('WordPressPageRenderer', () => {
     });
 
     expect(screen.getByTestId('gutenberg-renderer')).toHaveTextContent(
-      'Page content here'
+      'Rendered HTML from siter_headless'
+    );
+  });
+
+  it('falls back to content.rendered when rendered_html is missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(mockPostNoRenderedHtml), { status: 200 })
+    );
+
+    render(
+      <WordPressPageRenderer wpBaseUrl="https://example.com" id={1} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('gutenberg-renderer')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('gutenberg-renderer')).toHaveTextContent(
+      'Content field HTML'
+    );
+  });
+
+  it('uses content.rendered when htmlField is content', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(mockPost), { status: 200 })
+    );
+
+    render(
+      <WordPressPageRenderer
+        wpBaseUrl="https://example.com"
+        id={1}
+        htmlField="content"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('gutenberg-renderer')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('gutenberg-renderer')).toHaveTextContent(
+      'Content field HTML'
     );
   });
 
@@ -113,5 +162,55 @@ describe('WordPressPageRenderer', () => {
     await waitFor(() => {
       expect(screen.getByTestId('error')).toBeInTheDocument();
     });
+  });
+
+  it('forwards contentSize and wideSize as CSS custom properties', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(mockPost), { status: 200 })
+    );
+
+    render(
+      <WordPressPageRenderer
+        wpBaseUrl="https://example.com"
+        id={1}
+        contentSize="800px"
+        wideSize="1200px"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('gutenberg-renderer')).toBeInTheDocument();
+    });
+
+    const renderer = screen.getByTestId('gutenberg-renderer');
+    expect(
+      renderer.style.getPropertyValue('--wp--style--global--content-size')
+    ).toBe('800px');
+    expect(
+      renderer.style.getPropertyValue('--wp--style--global--wide-size')
+    ).toBe('1200px');
+  });
+
+  it('forwards wrapperClass and siteBlocksClass', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(mockPost), { status: 200 })
+    );
+
+    render(
+      <WordPressPageRenderer
+        wpBaseUrl="https://example.com"
+        id={1}
+        wrapperClass="my-wrapper"
+        siteBlocksClass="my-blocks"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('gutenberg-renderer')).toBeInTheDocument();
+    });
+
+    const renderer = screen.getByTestId('gutenberg-renderer');
+    expect(renderer).toHaveClass('my-wrapper');
+    expect(renderer.querySelector('.my-blocks')).toBeTruthy();
   });
 });

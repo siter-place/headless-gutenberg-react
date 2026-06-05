@@ -28,6 +28,7 @@ function createSanitizer(): (html: string) => string {
         'allow',
         'allowfullscreen',
         'frameborder',
+        'inert',
       ],
     });
 }

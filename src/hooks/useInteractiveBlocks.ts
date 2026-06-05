@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useSyncExternalStore } from 'react';
+import { injectLightboxOverlay } from '../lib/injectLightboxOverlay';
+import { injectServerData } from '../lib/injectServerData';
 import { loadScriptModule } from '../lib/loadScriptModule';
 import {
-  BLOCKS_REQUIRING_ROUTER,
-  getBlockScriptUrl,
-  getInteractivityRouterUrl,
-  getInteractivityRuntimeUrl,
-  INTERACTIVE_BLOCK_MAP,
+  getInteractivityBundlePath,
+  SUPPORTED_INTERACTIVE_BLOCKS,
 } from '../lib/wp-interactive-blocks';
 
 export interface UseInteractiveBlocksOptions {
-  wpBaseUrl: string;
+  basePath: string;
   blocks?: string[];
   containerRef: React.RefObject<HTMLElement | null>;
-  enabled?: boolean;
 }
 
 export interface UseInteractiveBlocksResult {
@@ -28,30 +26,24 @@ interface LoadState {
 
 const IDLE: LoadState = { loaded: false, error: null };
 const DONE: LoadState = { loaded: true, error: null };
-const DISABLED: LoadState = { loaded: false, error: null };
 
-function detectBlocksFromDom(
+function hasInteractiveBlocks(blocks: string[]): boolean {
+  return blocks.some((name) => SUPPORTED_INTERACTIVE_BLOCKS.has(name));
+}
+
+function detectInteractiveBlocksInDom(
   container: HTMLElement | null
-): string[] {
-  if (!container) return [];
-
-  const elements = container.querySelectorAll('[data-wp-interactive]');
-  const blockNames = new Set<string>();
-  for (const el of elements) {
-    const name = el.getAttribute('data-wp-interactive');
-    if (name && name in INTERACTIVE_BLOCK_MAP) {
-      blockNames.add(name);
-    }
-  }
-  return Array.from(blockNames);
+): boolean {
+  if (!container) return false;
+  return container.querySelector('[data-wp-interactive]') !== null;
 }
 
 export function useInteractiveBlocks(
   options: UseInteractiveBlocksOptions
 ): UseInteractiveBlocksResult {
-  const { wpBaseUrl, blocks, containerRef, enabled = false } = options;
+  const { basePath, blocks, containerRef } = options;
 
-  const stateRef = useRef<LoadState>(enabled ? IDLE : DISABLED);
+  const stateRef = useRef<LoadState>(IDLE);
   const listenersRef = useRef(new Set<() => void>());
 
   const subscribe = useCallback((cb: () => void) => {
@@ -66,16 +58,17 @@ export function useInteractiveBlocks(
   }, []);
 
   useEffect(() => {
-    if (!enabled || typeof document === 'undefined') {
-      stateRef.current = DISABLED;
+    if (typeof document === 'undefined') {
+      stateRef.current = DONE;
       notify();
       return;
     }
 
-    const neededBlocks =
-      blocks ?? detectBlocksFromDom(containerRef.current);
+    const needsInteractivity = blocks
+      ? hasInteractiveBlocks(blocks)
+      : detectInteractiveBlocksInDom(containerRef.current);
 
-    if (neededBlocks.length === 0) {
+    if (!needsInteractivity) {
       stateRef.current = DONE;
       notify();
       return;
@@ -85,21 +78,12 @@ export function useInteractiveBlocks(
 
     async function load() {
       try {
-        await loadScriptModule(getInteractivityRuntimeUrl(wpBaseUrl));
-
-        const needsRouter = neededBlocks.some((b) =>
-          BLOCKS_REQUIRING_ROUTER.has(b)
-        );
-        if (needsRouter) {
-          await loadScriptModule(getInteractivityRouterUrl(wpBaseUrl));
+        if (containerRef.current) {
+          injectServerData(containerRef.current);
+          injectLightboxOverlay(containerRef.current);
         }
-
-        const blockLoads = neededBlocks
-          .map((name) => getBlockScriptUrl(wpBaseUrl, name))
-          .filter((url): url is string => url !== null)
-          .map((url) => loadScriptModule(url));
-
-        await Promise.all(blockLoads);
+        const bundlePath = getInteractivityBundlePath(basePath);
+        await loadScriptModule(bundlePath);
 
         if (!cancelled) {
           stateRef.current = DONE;
@@ -117,12 +101,17 @@ export function useInteractiveBlocks(
       }
     }
 
-    load();
+    // Defer so the DOM is stable after React's render cycle
+    // (prevents race with StrictMode's unmount/remount)
+    const timerId = setTimeout(() => {
+      if (!cancelled) load();
+    }, 0);
 
     return () => {
       cancelled = true;
+      clearTimeout(timerId);
     };
-  }, [enabled, wpBaseUrl, blocks, containerRef, notify]);
+  }, [basePath, blocks, containerRef, notify]);
 
-  return useSyncExternalStore(subscribe, getSnapshot, () => DISABLED);
+  return useSyncExternalStore(subscribe, getSnapshot, () => IDLE);
 }

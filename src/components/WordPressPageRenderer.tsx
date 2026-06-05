@@ -3,13 +3,28 @@ import { useWordPressContent } from '../hooks/useWordPressContent';
 import { useHeadlessAssets } from '../hooks/useHeadlessAssets';
 import type { WordPressPageRendererProps } from '../types/wordpress';
 
+function resolveHtml(
+  post: { content: { rendered: string }; siter_headless?: { rendered_html?: string } },
+  htmlField: 'rendered_html' | 'content'
+): string {
+  if (htmlField === 'content') {
+    return post.content.rendered;
+  }
+  return post.siter_headless?.rendered_html ?? post.content.rendered;
+}
+
 export function WordPressPageRenderer({
   wpBaseUrl,
   postType = 'posts',
   id,
   slug,
-  enableInteractivity,
   className,
+  wrapperClass,
+  siteBlocksClass,
+  interactivityBasePath,
+  htmlField = 'rendered_html',
+  contentSize,
+  wideSize,
   showTitle = false,
   loadingFallback = null,
   errorFallback = null,
@@ -26,6 +41,8 @@ export function WordPressPageRenderer({
   if (loading) return <>{loadingFallback}</>;
   if (error || !post) return <>{errorFallback}</>;
 
+  const html = resolveHtml(post, htmlField);
+
   return (
     <div data-testid="wordpress-page-renderer">
       {showTitle && post.title?.rendered && (
@@ -35,11 +52,14 @@ export function WordPressPageRenderer({
         />
       )}
       <GutenbergRenderer
-        html={post.content.rendered}
+        html={html}
         assets={post.siter_headless}
-        wpBaseUrl={wpBaseUrl}
         className={className}
-        enableInteractivity={enableInteractivity}
+        wrapperClass={wrapperClass}
+        siteBlocksClass={siteBlocksClass}
+        interactivityBasePath={interactivityBasePath}
+        contentSize={contentSize}
+        wideSize={wideSize}
       />
     </div>
   );

@@ -26,8 +26,10 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "dev": "npm --prefix playground run dev",
-    "build": "tsup",
+    "build:interactivity": "node scripts/build-interactivity.mjs",
+    "build:interactivity:playground": "node scripts/build-interactivity.mjs --playground",
+    "dev": "npm run build:interactivity:playground && npm --prefix playground run dev",
+    "build": "tsup && npm run build:interactivity",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -52,6 +54,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
+    "esbuild": "^0.28.0",
     "eslint": "latest",
     "eslint-plugin-react-hooks": "latest",
     "eslint-plugin-react-refresh": "latest",
@@ -71,6 +74,8 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
+    "@wordpress/block-library": "^9.48.0",
+    "@wordpress/interactivity": "^6.48.0",
     "dompurify": "^3.4.8"
   }
 }

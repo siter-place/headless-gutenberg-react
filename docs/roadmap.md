@@ -19,9 +19,9 @@ flowchart LR
     P7 --> P8
 ```
 
-## Phase 1: Foundation (current)
+## Phase 1: Foundation
 
-**Status:** In progress
+**Status:** Complete
 
 **Deliverables:**
 - Project scaffold (package.json, tsconfig, tsup, vitest, playwright, eslint, prettier)
@@ -33,132 +33,83 @@ flowchart LR
 - Vite playground
 - GitHub Actions CI
 
-**Files created:**
-- `src/components/HelloWorld.tsx`
-- `src/index.ts`
-- `src/components/__tests__/HelloWorld.test.tsx`
-- `e2e/hello-world.spec.ts`
-- `playground/` (full Vite app)
-
-**Exports:** `HelloWorld`, `HelloWorldProps`
-
-**Acceptance criteria:**
-- `npm run check` passes (typecheck + lint + test + build)
-- `npm run test:e2e` passes
-- Playground renders at `http://127.0.0.1:5173`
-
 ## Phase 2: Types and Renderer Skeleton
+
+**Status:** Complete
 
 **Deliverables:**
 - `src/types/wordpress.ts` with `SiterHeadlessAssets`, `WordPressRenderedContent`
 - `GutenbergRendererProps`, `WordPressPageRendererProps` types
-- `src/components/GutenbergRenderer.tsx` skeleton (accepts html prop, renders unsanitized for now)
+- `src/components/GutenbergRenderer.tsx` with wrapper/siteBlocks DOM structure
 - `src/lib/normalizeWrapper.ts` (parse wrapper class from `assets.wrapper`)
-
-**New exports:** `GutenbergRenderer`, `GutenbergRendererProps`, `SiterHeadlessAssets`, `WordPressRenderedContent`
-
-**Tests:** Unit tests for normalizeWrapper, GutenbergRenderer basic rendering
-
-**Relevant rules:** `004-react-typescript.mdc`, `005-project-headless-gutenberg.mdc`
 
 ## Phase 3: Sanitization
 
+**Status:** Complete
+
 **Deliverables:**
 - `src/lib/sanitize.ts` with DOMPurify configuration
-- Preserve `data-wp-*` attributes via `addHook('uponSanitizeAttribute')`
-- Strip `<script>` tags and inline event handlers
+- Preserves `data-wp-*` attributes via `addHook('uponSanitizeAttribute')`
+- Strips `<script>` tags and inline event handlers
 - SSR guard (skip sanitization when `typeof window === 'undefined'`)
-
-**New exports:** `sanitizeGutenbergHtml`
-
-**New dependency:** `dompurify`
-
-**Tests:**
-- Preserves data-wp-interactive, data-wp-context, data-wp-on--click, etc.
-- Strips script tags and onclick handlers
-- Preserves iframes, srcset, loading, decoding attributes
-
-**Relevant skills:** `security-review` (must be invoked for this phase)
+- Preserves `inert` attribute for accordion panels
 
 ## Phase 4: CSS Asset Loading
 
+**Status:** Complete
+
 **Deliverables:**
 - `src/hooks/useHeadlessAssets.ts`
-- Inject `<link rel="stylesheet">` tags with `data-siter-headless-css` attribute
-- Deduplicate by href
-- Track load/error events
+- Injects `<link rel="stylesheet">` tags with `data-siter-headless-css` attribute
+- Deduplicates by href
+- Tracks load/error events
 - Cleanup on unmount
 - SSR guard
 
-**New exports:** `useHeadlessAssets`
-
-**Tests:**
-- Links injected into document.head
-- Duplicates prevented
-- Cleanup removes links
-- Load/error state tracking
-
 ## Phase 5: WordPress REST Fetching
+
+**Status:** Complete
 
 **Deliverables:**
 - `src/hooks/useWordPressContent.ts`
-- Fetch by ID or slug
-- AbortController for cleanup
+- Fetch by ID or slug with AbortController cleanup
 - `src/components/WordPressPageRenderer.tsx` convenience component
+- Configurable `htmlField` (`rendered_html` with fallback to `content.rendered`)
 - Loading and error states
-
-**New exports:** `useWordPressContent`, `WordPressPageRenderer`, `WordPressPageRendererProps`
-
-**Tests:**
-- Fetch by ID
-- Fetch by slug (array response handling)
-- Abort on unmount
-- Error exposure
-- WordPressPageRenderer integration
-
-**Playground update:** Add configurable WordPress URL input
 
 ## Phase 6: WordPress Interactivity API
 
+**Status:** Complete
+
 **Deliverables:**
-- `src/lib/wp-interactive-blocks.ts` (block-to-script map)
-- `src/lib/loadScriptModule.ts` (dynamic script module loader)
-- `src/hooks/useInteractiveBlocks.ts`
-- Load interactivity runtime, router, and block scripts
-- Global deduplication cache
-
-**New exports:** `useInteractiveBlocks`
-
-**Tests:**
-- Script loading order (runtime -> router -> blocks)
-- Deduplication
-- DOM detection fallback for `[data-wp-interactive]`
-- SSR guard
-
-**Relevant skills:** `security-review` (script loading from external origins)
+- `src/lib/wp-interactive-blocks.ts` (supported blocks set, bundle path builder)
+- `src/lib/loadScriptModule.ts` (dynamic ES module loader)
+- `src/lib/injectServerData.ts` (extracts image metadata from DOM, injects as JSON script tag)
+- `src/hooks/useInteractiveBlocks.ts` (orchestrates loading with deferred execution)
+- `scripts/build-interactivity.mjs` (esbuild bundler for single interactivity bundle)
+- Single `interactivity.js` bundle containing runtime + all block view scripts
+- Ref-based HTML injection (`useLayoutEffect` + `innerHTML`) for DOM stability
+- `setTimeout(0)` deferral to prevent React StrictMode race conditions
+- Supported blocks: accordion, image/gallery, tabs, file
+- Known limitation: gallery lightbox requires server-rendered overlay HTML
 
 ## Phase 7: npm Publishing
 
+**Status:** Complete
+
 **Deliverables:**
-- `.github/workflows/publish.yml`
-- npm trusted publishing via GitHub Actions OIDC (no long-lived tokens)
-- Provenance support
-- Release process documentation
-
-**CI requirements:**
-- Triggered on GitHub release creation
-- Uses `permissions: id-token: write` for OIDC
-- Runs `npm publish --provenance`
-
-**Relevant skills:** `security-review` (publishing security)
+- `.github/workflows/publish.yml` with npm trusted publishing (OIDC)
+- Provenance support via `--provenance`
+- `.github/workflows/ci.yml` for continuous integration
 
 ## Phase 8: Lovable Integration Examples
 
+**Status:** Complete
+
 **Deliverables:**
-- Lovable usage guide in docs
-- Demo app examples
-- Local WordPress testing examples
-- Integration patterns for AI-generated React apps
+- Lovable usage guide in README
+- Local WordPress testing via playground
+- Vite proxy for REST API during development
 
 ## Skills and Rules Relevance by Phase
 

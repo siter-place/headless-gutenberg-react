@@ -27,6 +27,8 @@ Opens the Vite playground at `http://127.0.0.1:5173`.
 - Edit library source in `src/`.
 - Edit playground UI in `playground/src/`.
 - Changes hot-reload automatically.
+- Load a WordPress post by entering the Post ID and clicking "Load Post".
+- Interactivity (accordion) works out of the box with locally bundled scripts.
 
 ## Before opening a PR
 
@@ -51,7 +53,7 @@ This runs typecheck, lint, unit tests, and build in sequence. All must pass.
 npm run build
 ```
 
-Produces `dist/` with ESM (`index.js`), CommonJS (`index.cjs`), and TypeScript declarations (`index.d.ts`).
+Produces `dist/` with ESM (`index.js`), CommonJS (`index.cjs`), TypeScript declarations (`index.d.ts`), and the interactivity bundle (`interactivity/interactivity.js`).
 
 ## Lint and format
 
@@ -64,23 +66,26 @@ npm run format        # auto-format all files with Prettier
 
 ```
 src/                  # library source (published to npm)
+  components/         # React components (GutenbergRenderer, WordPressPageRenderer, HelloWorld)
+  hooks/              # React hooks (useWordPressContent, useHeadlessAssets, useInteractiveBlocks)
+  lib/                # utilities (sanitize, normalizeWrapper, loadScriptModule, injectServerData, wp-interactive-blocks)
+  types/              # TypeScript type definitions
+scripts/              # build scripts (build-interactivity.mjs)
 playground/           # local Vite dev app (not published)
 e2e/                  # Playwright browser tests
 docs/                 # expanded documentation
 .cursor/rules/        # Cursor agent rules
-.cursor/skills/       # Cursor agent skills
+.agents/skills/       # Cursor agent skills
 ```
 
 ## Deploy / publish
 
-Not published to npm yet. CI validates automatically on push and PR to `main`.
-
-Future publishing will use GitHub Actions with npm trusted publishing (OIDC) instead of long-lived npm tokens.
+Published to npm as `@siter/headless-gutenberg-react`. CI validates on push and PR to `main`. Publishing uses GitHub Actions with npm trusted publishing (OIDC) triggered by GitHub releases.
 
 ## Where to go next
 
-- [local-development.md](local-development.md) — full setup, playground architecture, troubleshooting
-- [testing-strategy.md](testing-strategy.md) — when to add unit vs. browser tests
-- [architecture.md](architecture.md) — long-term product design and data flow
-- [roadmap.md](roadmap.md) — what each phase delivers
-- [AGENTS.md](../AGENTS.md) — Cursor agent workflow and completion criteria
+- [local-development.md](local-development.md) -- full setup, playground architecture, troubleshooting
+- [testing-strategy.md](testing-strategy.md) -- when to add unit vs. browser tests
+- [architecture.md](architecture.md) -- system design and data flow
+- [roadmap.md](roadmap.md) -- phased development plan
+- [AGENTS.md](../AGENTS.md) -- Cursor agent workflow and completion criteria

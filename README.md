@@ -1,8 +1,8 @@
 # @siter/headless-gutenberg-react
 
-The simplest bridge between WordPress Gutenberg and React frontends.
+Render WordPress Gutenberg content in any React app -- with CSS loading, HTML sanitization, and interactive block hydration.
 
-Renders WordPress REST API content in React, Lovable, and any headless React app -- with CSS loading, HTML sanitization, and optional interactivity hydration.
+Works with React, Lovable, Next.js, Vite, and any headless WordPress setup.
 
 ## Installation
 
@@ -14,7 +14,7 @@ Peer dependencies: `react` >= 18, `react-dom` >= 18.
 
 ## Quick Start
 
-### Render a WordPress post
+### Render a WordPress post by ID
 
 ```tsx
 import { WordPressPageRenderer } from '@siter/headless-gutenberg-react';
@@ -45,6 +45,8 @@ export function BlogPost() {
 
 ### Manual control with hooks
 
+For full control over fetching, CSS injection, and rendering:
+
 ```tsx
 import {
   useWordPressContent,
@@ -66,45 +68,72 @@ export function CustomRenderer() {
 
   return (
     <GutenbergRenderer
-      html={post.content.rendered}
+      html={post.siter_headless?.rendered_html ?? post.content.rendered}
       assets={post.siter_headless}
     />
   );
 }
 ```
 
-## Lovable Integration
+## Layout Customization
 
-This package works in [Lovable](https://lovable.dev) apps. Install the package and use `WordPressPageRenderer` or the hooks directly.
+WordPress themes define `--wp--style--global--content-size` and `--wp--style--global--wide-size` to control content and wide block widths. By default, these values come from the WordPress-generated CSS loaded via `siter_headless.css_urls`.
+
+To override them for your site (e.g. to match your app's container width):
 
 ```tsx
-// In a Lovable-generated React app
-import { WordPressPageRenderer } from '@siter/headless-gutenberg-react';
-
-export default function WordPressPage() {
-  return (
-    <div className="max-w-4xl mx-auto py-8">
-      <WordPressPageRenderer
-        wpBaseUrl="https://your-wordpress-site.com"
-        postType="pages"
-        slug="home"
-        showTitle
-        loadingFallback={<p className="text-gray-500">Loading...</p>}
-        errorFallback={<p className="text-red-500">Could not load page.</p>}
-      />
-    </div>
-  );
-}
+<GutenbergRenderer
+  html={html}
+  assets={assets}
+  contentSize="720px"
+  wideSize="1200px"
+/>
 ```
 
-### CORS Setup
+Or with the convenience component:
 
-Your WordPress site must send CORS headers for the React app's domain. The Siter plugin handles this. If using a custom setup, add these headers to your WordPress server:
-
+```tsx
+<WordPressPageRenderer
+  wpBaseUrl="https://your-wordpress-site.com"
+  id={42}
+  contentSize="720px"
+  wideSize="1200px"
+/>
 ```
-Access-Control-Allow-Origin: https://your-app-domain.com
-Access-Control-Allow-Methods: GET, OPTIONS
-Access-Control-Allow-Headers: Content-Type
+
+When not provided, the values fall through to the WordPress theme CSS. This lets you use the theme defaults or override per-site.
+
+## Interactivity
+
+Interactive Gutenberg blocks work automatically. The package bundles the WordPress Interactivity API runtime and block view scripts locally -- no remote script loading or CORS configuration needed.
+
+| Block | Behavior | Status |
+|-------|----------|--------|
+| Accordion | Expand/collapse sections | Working |
+| Image lightbox | Click image to open fullscreen overlay | Working |
+| Gallery | Multi-image lightbox with navigation | Working |
+| Tabs | Tabbed content switching | Bundled |
+| File | Download file blocks | Bundled |
+
+### How it works
+
+1. `GutenbergRenderer` renders WordPress HTML via ref-based DOM injection (outside React's virtual DOM).
+2. `useInteractiveBlocks` detects `data-wp-interactive` attributes in the rendered DOM.
+3. `injectServerData` extracts image metadata from the HTML and injects it as initial state for the interactivity runtime.
+4. `injectLightboxOverlay` creates the lightbox overlay element that WordPress normally renders server-side in `wp_footer`.
+5. The single `interactivity.js` bundle loads as an ES module containing the runtime + all block view scripts.
+6. The runtime finds `[data-wp-interactive]` elements and hydrates them with Preact.
+
+### Configuring the interactivity base path
+
+By default, interactivity scripts are loaded from `/interactivity/`. If you serve them from a different path:
+
+```tsx
+<GutenbergRenderer
+  html={html}
+  assets={assets}
+  interactivityBasePath="/custom/path/to/interactivity/"
+/>
 ```
 
 ## WordPress REST API
@@ -121,36 +150,144 @@ The `siter_headless` response field provides:
 | Field | Type | Description |
 |-------|------|-------------|
 | `wrapper` | `string` | CSS class selector for the content wrapper |
-| `status` | `string` | Asset status: `ready`, `dirty`, `generating`, `failed`, `missing` |
+| `status` | `string` | `ready`, `dirty`, `generating`, `failed`, `missing` |
 | `css_urls` | `string[]` | Generated CSS stylesheet URLs |
 | `blocks` | `string[]` | Gutenberg block types used in the post |
+| `rendered_html` | `string` | Full rendered HTML from WordPress |
+
+### CORS Setup
+
+Your WordPress site must send CORS headers for the React app's domain. The Siter plugin handles this. For custom setups:
+
+```
+Access-Control-Allow-Origin: https://your-app-domain.com
+Access-Control-Allow-Methods: GET, OPTIONS
+Access-Control-Allow-Headers: Content-Type
+```
 
 ## API Reference
 
 ### Components
 
-- **`WordPressPageRenderer`** -- Fetches and renders a WordPress post/page. Handles loading, error, and CSS injection.
-- **`GutenbergRenderer`** -- Renders raw HTML with sanitization, wrapper class, and asset status handling.
-- **`HelloWorld`** -- Test component (Phase 1 placeholder).
+#### `WordPressPageRenderer`
+
+Fetches and renders a WordPress post/page. Handles loading, error states, CSS injection, and interactivity.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `wpBaseUrl` | `string` | (required) | WordPress site URL |
+| `postType` | `string` | `'posts'` | REST API post type |
+| `id` | `number` | -- | Post ID (provide `id` or `slug`) |
+| `slug` | `string` | -- | Post slug (provide `id` or `slug`) |
+| `htmlField` | `'rendered_html' \| 'content'` | `'rendered_html'` | Which field to use for HTML |
+| `wrapperClass` | `string` | from `assets.wrapper` | Override wrapper CSS class |
+| `siteBlocksClass` | `string` | `'wp-site-blocks'` | Override inner div class |
+| `contentSize` | `string` | -- | Override `--wp--style--global--content-size` |
+| `wideSize` | `string` | -- | Override `--wp--style--global--wide-size` |
+| `interactivityBasePath` | `string` | `'/interactivity/'` | Path to interactivity bundle |
+| `showTitle` | `boolean` | `false` | Render post title as `<h1>` |
+| `loadingFallback` | `ReactNode` | `null` | Loading state UI |
+| `errorFallback` | `ReactNode` | `null` | Error state UI |
+| `className` | `string` | -- | Additional CSS class for outer wrapper |
+
+#### `GutenbergRenderer`
+
+Renders raw HTML with sanitization, wrapper class, layout overrides, and interactivity hydration.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `html` | `string` | (required) | HTML content to render |
+| `assets` | `SiterHeadlessAssets` | -- | Asset metadata from REST response |
+| `className` | `string` | -- | Additional CSS class for outer wrapper |
+| `wrapperClass` | `string` | from `assets.wrapper` | Override wrapper CSS class |
+| `siteBlocksClass` | `string` | `'wp-site-blocks'` | Inner div class |
+| `contentSize` | `string` | -- | Override `--wp--style--global--content-size` |
+| `wideSize` | `string` | -- | Override `--wp--style--global--wide-size` |
+| `interactivityBasePath` | `string` | `'/interactivity/'` | Path to interactivity bundle |
+| `sanitize` | `boolean` | `true` | Enable HTML sanitization |
 
 ### Hooks
 
-- **`useWordPressContent(options)`** -- Fetches a WordPress post by ID or slug. Returns `{ post, loading, error, refetch }`.
-- **`useHeadlessAssets(cssUrls)`** -- Injects CSS `<link>` tags into the document head. Returns `{ loaded, loading, error }`.
-- **`useInteractiveBlocks(options)`** -- Loads WordPress Interactivity API runtime and block scripts. Returns `{ loaded, error }`.
+#### `useWordPressContent(options)`
+
+Fetches a WordPress post by ID or slug.
+
+```typescript
+const { post, loading, error, refetch } = useWordPressContent({
+  wpBaseUrl: 'https://example.com',
+  postType: 'pages',
+  id: 42,
+});
+```
+
+Returns `{ post, loading, error, refetch }`.
+
+#### `useHeadlessAssets(cssUrls)`
+
+Injects CSS `<link>` tags into the document head. Deduplicates, tracks load/error, cleans up on unmount.
+
+```typescript
+useHeadlessAssets(post?.siter_headless?.css_urls);
+```
+
+Returns `{ loaded, loading, error }`.
+
+#### `useInteractiveBlocks(options)`
+
+Loads the interactivity bundle for detected interactive blocks. Called internally by `GutenbergRenderer`.
+
+Returns `{ loaded, error }`.
 
 ### Utilities
 
-- **`sanitizeGutenbergHtml(html)`** -- Sanitizes HTML with DOMPurify, preserving `data-wp-*` attributes for interactivity.
+- **`sanitizeGutenbergHtml(html)`** -- Sanitizes HTML with DOMPurify, preserving `data-wp-*` attributes.
 - **`normalizeWrapper(wrapper)`** -- Converts CSS selector (`.my-class`) to class name (`my-class`).
+
+### Types
+
+All types are exported for TypeScript consumers:
+
+```typescript
+import type {
+  SiterHeadlessAssets,
+  WordPressRenderedContent,
+  GutenbergRendererProps,
+  WordPressPageRendererProps,
+  AssetStatus,
+} from '@siter/headless-gutenberg-react';
+```
+
+## Lovable Integration
+
+This package works in [Lovable](https://lovable.dev) apps:
+
+```tsx
+import { WordPressPageRenderer } from '@siter/headless-gutenberg-react';
+
+export default function WordPressPage() {
+  return (
+    <div className="max-w-4xl mx-auto py-8">
+      <WordPressPageRenderer
+        wpBaseUrl="https://your-wordpress-site.com"
+        postType="pages"
+        slug="home"
+        showTitle
+        contentSize="720px"
+        loadingFallback={<p className="text-gray-500">Loading...</p>}
+        errorFallback={<p className="text-red-500">Could not load page.</p>}
+      />
+    </div>
+  );
+}
+```
 
 ## Security
 
-- All HTML from `content.rendered` is sanitized via DOMPurify before rendering.
+- All HTML is sanitized via DOMPurify before rendering. `<script>` tags and inline event handlers are stripped.
 - `data-wp-*` attributes are preserved for WordPress Interactivity API compatibility.
-- `<script>` tags and inline event handlers are stripped.
+- HTML is injected via ref-based `innerHTML` (outside React's virtual DOM) to prevent conflicts with interactivity hydration.
 - CSS URLs are loaded only from the WordPress REST response.
-- Script modules for interactivity are loaded only from the specified `wpBaseUrl`.
+- Interactivity scripts are bundled locally from npm packages -- no remote script loading from WordPress at runtime.
 
 ## Local Development
 
@@ -161,9 +298,11 @@ npm run check     # typecheck + lint + test + build
 npm run test:e2e  # Playwright browser tests
 ```
 
+See [docs/quickstart.md](docs/quickstart.md) for daily commands and [docs/local-development.md](docs/local-development.md) for full setup.
+
 ## Publishing
 
-Publishing uses GitHub Actions with npm trusted publishing (OIDC). A GitHub release triggers the publish workflow which runs all checks and publishes with provenance.
+Publishing uses GitHub Actions with npm trusted publishing (OIDC). A GitHub release triggers the publish workflow.
 
 ## Documentation
 

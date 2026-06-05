@@ -16,7 +16,7 @@ flowchart BT
 |-------|------|-------|---------------|
 | Unit | Vitest + RTL | Fast (ms) | Individual component output, props, hooks |
 | Integration | Vitest + RTL | Fast (ms) | Component composition, DOM behavior |
-| E2E | Playwright | Slower (seconds) | Full browser rendering, playground behavior |
+| E2E | Playwright | Slower (seconds) | Full browser rendering, playground behavior, interactivity |
 
 ## Test Decision Tree
 
@@ -52,18 +52,34 @@ Tests live next to the code they test, in `__tests__/` directories:
 
 ```
 src/
-├── components/
-│   ├── HelloWorld.tsx
-│   └── __tests__/
-│       └── HelloWorld.test.tsx
-├── hooks/              # future
-│   ├── useHeadlessAssets.ts
-│   └── __tests__/
-│       └── useHeadlessAssets.test.ts
-└── lib/                # future
-    ├── sanitize.ts
-    └── __tests__/
-        └── sanitize.test.ts
+  components/
+    GutenbergRenderer.tsx
+    WordPressPageRenderer.tsx
+    HelloWorld.tsx
+    __tests__/
+      GutenbergRenderer.test.tsx
+      WordPressPageRenderer.test.tsx
+      HelloWorld.test.tsx
+  hooks/
+    useWordPressContent.ts
+    useHeadlessAssets.ts
+    useInteractiveBlocks.ts
+    __tests__/
+      useWordPressContent.test.ts
+      useHeadlessAssets.test.ts
+      useInteractiveBlocks.test.ts
+  lib/
+    sanitize.ts
+    normalizeWrapper.ts
+    loadScriptModule.ts
+    injectServerData.ts
+    wp-interactive-blocks.ts
+    __tests__/
+      sanitize.test.ts
+      normalizeWrapper.test.ts
+      loadScriptModule.test.ts
+      injectServerData.test.ts
+      wp-interactive-blocks.test.ts
 ```
 
 ### Commands
@@ -95,6 +111,17 @@ Key principles:
 - Use `getByTestId`, `getByRole`, `getByText` to find elements.
 - Use `toHaveTextContent`, `toBeVisible`, `toBeInTheDocument` for assertions.
 - Avoid testing implementation details like state values or internal method calls.
+
+### Testing deferred effects
+
+`useInteractiveBlocks` uses `setTimeout(0)` to defer script loading. Tests must use `vi.useFakeTimers()` and `vi.advanceTimersByTime()` to trigger the deferred callback:
+
+```typescript
+vi.useFakeTimers();
+renderHook(() => useInteractiveBlocks({ ... }));
+await act(async () => { vi.advanceTimersByTime(10); });
+// Now assert on injected script tags
+```
 
 ## Browser Testing with Playwright
 
@@ -133,44 +160,78 @@ expect(text).toBe('Hello Siter');
 
 - A new component is rendered in the playground
 - Playground layout or navigation changes
-- Future: WordPress REST integration is testable in browser
-- Future: CSS asset injection is visible in browser
-- Future: interactive blocks hydrate in browser
+- WordPress REST integration is testable in browser
+- CSS asset injection is visible in browser
+- Interactive blocks hydrate in browser (accordion, lightbox)
 
-## Future Test Categories
+### Interactivity hydration testing
 
-### Phase 3: Sanitization tests (Vitest)
+E2E tests for interactivity use a `waitForInteractivityHydration` helper that waits for Preact's event listener attachment (detected via the `l` property on hydrated elements):
 
-- DOMPurify preserves `data-wp-*` attributes
+```typescript
+async function waitForInteractivityHydration(page: Page) {
+  await page.waitForFunction(
+    () => {
+      const btn = document.querySelector('.wp-block-accordion-heading button');
+      return btn && 'l' in btn;
+    },
+    { timeout: 15_000 }
+  );
+}
+```
+
+## Current Test Coverage
+
+### Sanitization tests (Vitest)
+
+- DOMPurify preserves `data-wp-*` attributes (interactive, context, on--click, bind, class, watch, init)
 - Script tags are stripped
-- Inline event handlers are stripped
+- Inline event handlers are stripped (onclick, onerror)
 - Iframes with safe attributes are preserved
-- SSR guard returns raw HTML when `document` is unavailable
+- srcset, sizes, loading, decoding, target, rel attributes preserved
+- Complex Gutenberg HTML with multiple data-wp-* attributes handled
 
-### Phase 4: CSS asset loading tests (Vitest)
+### CSS asset loading tests (Vitest)
 
 - `useHeadlessAssets` injects `<link>` tags into `document.head`
 - Duplicate CSS URLs are not injected twice
 - Cleanup removes injected links on unmount
-- SSR guard skips DOM manipulation
+- Loading and error state tracking
 
-### Phase 5: REST fetching tests (Vitest)
+### REST fetching tests (Vitest)
 
 - `useWordPressContent` fetches by ID
 - `useWordPressContent` fetches by slug (array response, takes first)
+- Custom postType support
 - AbortController cancels on unmount
 - Error states are exposed
+- Empty slug array response handling
 
-### Phase 6: Interactivity tests (Vitest + Playwright)
+### Interactivity tests (Vitest + Playwright)
 
-- Block script modules load once (no duplicates)
-- Interactivity runtime loads before block scripts
-- Router module loads when `core/query` is present
-- DOM detection fallback scans for `[data-wp-interactive]`
+- Single interactivity bundle loads for interactive blocks (Vitest)
+- Same bundle loads regardless of which blocks are present (Vitest)
+- Unsupported blocks are filtered out (Vitest)
+- No bundle loads when only unsupported blocks present (Vitest)
+- Accordion expands/collapses on click (Playwright)
+- Interactivity bundle, server data, and Preact hydration verified (Playwright)
+
+### Server data injection tests (Vitest)
+
+- Image metadata extracted from `data-wp-context` attributes
+- Gallery parent context linked to child images
+- JSON script tag injected into document head
+- Idempotent injection (only injects once)
+- Reset function cleans up injected tag
+
+### Component tests (Vitest)
+
+- GutenbergRenderer renders HTML with wrapper class, siteBlocksClass
+- WordPressPageRenderer resolves rendered_html with fallback
+- Props forwarding (wrapperClass, siteBlocksClass, htmlField)
+- Title display toggle
 
 ## Coverage Expectations
-
-Phase 1 does not enforce coverage thresholds. As the codebase grows:
 
 - Public API functions and components: 100% coverage target
 - Internal utilities: 80%+ coverage target

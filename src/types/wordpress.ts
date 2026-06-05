@@ -11,6 +11,8 @@ export interface SiterHeadlessAssets {
   theme: string | null;
   wp_version: string | null;
   error_message: string | null;
+  rendered_html?: string;
+  html_url?: string | null;
 }
 
 export interface WordPressRenderedContent {
@@ -24,10 +26,15 @@ export interface WordPressRenderedContent {
 export interface GutenbergRendererProps {
   html: string;
   assets?: SiterHeadlessAssets;
-  wpBaseUrl?: string;
   className?: string;
-  enableInteractivity?: boolean;
+  wrapperClass?: string;
+  siteBlocksClass?: string;
+  interactivityBasePath?: string;
   sanitize?: boolean;
+  /** Override WordPress --wp--style--global--content-size (e.g. '675px') */
+  contentSize?: string;
+  /** Override WordPress --wp--style--global--wide-size (e.g. '1340px') */
+  wideSize?: string;
   loadingFallback?: React.ReactNode;
   onAssetStatusChange?: (status: AssetStatus) => void;
 }
@@ -37,8 +44,15 @@ export interface WordPressPageRendererProps {
   postType?: string;
   id?: number;
   slug?: string;
-  enableInteractivity?: boolean;
   className?: string;
+  wrapperClass?: string;
+  siteBlocksClass?: string;
+  interactivityBasePath?: string;
+  htmlField?: 'rendered_html' | 'content';
+  /** Override WordPress --wp--style--global--content-size (e.g. '675px') */
+  contentSize?: string;
+  /** Override WordPress --wp--style--global--wide-size (e.g. '1340px') */
+  wideSize?: string;
   showTitle?: boolean;
   loadingFallback?: React.ReactNode;
   errorFallback?: React.ReactNode;

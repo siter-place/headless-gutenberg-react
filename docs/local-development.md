@@ -26,6 +26,7 @@ flowchart LR
 - Node.js 22 or later
 - npm (not pnpm or yarn)
 - Git
+- (Optional) Local WordPress instance with Siter plugin for live testing
 
 ### Clone and install
 
@@ -51,6 +52,8 @@ npm run dev
 
 Opens the Vite development server at `http://127.0.0.1:5173`.
 
+The `dev` command first builds the interactivity bundle to `playground/public/interactivity/`, then starts the Vite dev server. This ensures the interactivity script is available locally.
+
 ### Playground Architecture
 
 The playground is a separate Vite app in `playground/` that imports the library source directly:
@@ -58,9 +61,11 @@ The playground is a separate Vite app in `playground/` that imports the library 
 ```mermaid
 flowchart TD
     PlaygroundApp["playground/src/App.tsx"] -->|"import from '../../src'"| LibSource["src/index.ts"]
-    LibSource --> HelloWorld["src/components/HelloWorld.tsx"]
+    LibSource --> Components["GutenbergRenderer, WordPressPageRenderer, HelloWorld"]
     ViteConfig["playground/vite.config.ts"] -->|"serves"| PlaygroundApp
-    RootDev["npm run dev"] -->|"npm --prefix playground run dev"| ViteConfig
+    ViteConfig -->|"proxies /wp-json"| WordPress["Local WordPress Instance"]
+    RootDev["npm run dev"] -->|"build interactivity + start Vite"| ViteConfig
+    InteractivityBuild["scripts/build-interactivity.mjs"] -->|"bundles to"| PublicDir["playground/public/interactivity/interactivity.js"]
 ```
 
 Key points:
@@ -68,6 +73,21 @@ Key points:
 - Changes to library source files hot-reload in the playground immediately.
 - The playground has its own `package.json` with its own dependencies (react, react-dom, vite).
 - The playground's `tsconfig.json` extends the root `tsconfig.json`.
+- The Vite config proxies `/wp-json` requests to the local WordPress instance for CORS-free REST API access.
+- The interactivity bundle is pre-built to `playground/public/interactivity/interactivity.js` and served as a static file.
+
+### WordPress Integration Testing
+
+The playground supports testing against a local WordPress instance:
+
+1. Enter the WordPress Base URL (leave empty to use the proxy, which defaults to `https://lovable-wp-integration.local`).
+2. Enter the Post ID (defaults to `1`).
+3. Click "Load Post" to fetch and render the content.
+
+The rendered content includes:
+- CSS stylesheet injection from `siter_headless.css_urls`
+- HTML sanitization with DOMPurify
+- Interactive block hydration (accordion expand/collapse)
 
 ### What to edit
 
@@ -77,13 +97,16 @@ Key points:
 | Playground UI | `playground/src/` | Local demo app for manual testing |
 | Unit tests | `src/**/__tests__/` | Vitest + React Testing Library tests |
 | Browser tests | `e2e/` | Playwright tests against the playground |
+| Build scripts | `scripts/` | esbuild script for interactivity bundle |
 
 ## Available Scripts
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Start playground dev server |
-| `npm run build` | Build library to `dist/` (ESM, CJS, .d.ts) |
+| `npm run dev` | Build interactivity bundle and start playground dev server |
+| `npm run build` | Build library to `dist/` (ESM, CJS, .d.ts) and interactivity bundle |
+| `npm run build:interactivity` | Build interactivity bundle to `dist/interactivity/` |
+| `npm run build:interactivity:playground` | Build interactivity bundle to `playground/public/interactivity/` |
 | `npm run typecheck` | Run TypeScript compiler check |
 | `npm run test` | Run unit tests once |
 | `npm run test:watch` | Run unit tests in watch mode |
@@ -96,38 +119,41 @@ Key points:
 
 ## Build Output
 
-`npm run build` uses tsup to produce:
+`npm run build` uses tsup to produce the library bundle and esbuild to produce the interactivity bundle:
 
 ```
 dist/
-├── index.js      # ESM module
-├── index.cjs     # CommonJS module
-├── index.d.ts    # TypeScript declarations
-└── index.js.map  # Source map
+  index.js             # ESM module
+  index.cjs            # CommonJS module
+  index.d.ts           # TypeScript declarations
+  index.js.map         # Source map
+  interactivity/
+    interactivity.js   # Single bundle: runtime + all block view scripts
 ```
 
 React and ReactDOM are externalized (not bundled).
 
-## Future: Local WordPress Testing
+The `dist/interactivity/` directory is included in the published npm package so consumers get the interactivity bundle without needing to run the build script themselves.
 
-Later phases will support testing against a local WordPress REST API.
+## Local WordPress Testing
 
 ### Expected local setup
 
-A local WordPress instance (e.g., via Docker or Local) with the Siter plugin installed.
+A local WordPress instance (e.g., via Docker, Local, or DevKinsta) with the Siter plugin installed.
 
 ### Expected endpoint
 
 ```
-http://localhost/wp-json/wp/v2/pages/{id}?siter_headless=1
+https://lovable-wp-integration.local/wp-json/wp/v2/posts/{id}?siter_headless=1
 ```
 
-### Future playground configuration
+### Playground configuration
 
-The playground will support configuring:
-- WordPress base URL
-- Post type (pages, posts, custom)
-- Post ID or slug
+The playground supports:
+- WordPress base URL (text input, leave empty for proxy)
+- Post ID (number input, defaults to 1)
+
+The Vite proxy in `playground/vite.config.ts` forwards `/wp-json` requests to `https://lovable-wp-integration.local` with `secure: false` for self-signed certificates.
 
 ## Troubleshooting
 
@@ -141,6 +167,16 @@ The playground will support configuring:
 - Ensure playground dependencies are installed: `cd playground && npm install && cd ..`
 - Check that port 5173 is not already in use
 
+### Interactivity not working
+
+- Ensure the interactivity bundle is built: check that `playground/public/interactivity/interactivity.js` exists
+- Rebuild with: `npm run build:interactivity:playground`
+- Check the browser console for script loading errors
+- Verify a `<script type="module" src="...interactivity.js">` tag appears in the page
+- Verify the `wp-script-module-data-@wordpress/interactivity` JSON script tag is injected in `<head>`
+- Accordion: check that `aria-expanded` toggles on heading button click
+- Gallery lightbox: requires server-rendered `<div class="wp-lightbox-overlay">` in the HTML (see known limitations in architecture.md)
+
 ### Playwright tests fail to start
 
 - Run `npm run prepare:e2e` to install browser binaries
@@ -152,4 +188,4 @@ The playground will support configuring:
 
 ### ESLint reports errors in generated files
 
-- The ESLint config ignores `dist/`, `coverage/`, `playground/dist/`, `playwright-report/`, and `test-results/`. If new generated directories appear, add them to the ignores in `eslint.config.js`.
+- The ESLint config ignores `dist/`, `coverage/`, `playground/dist/`, `playground/public/interactivity/`, `scripts/`, `playwright-report/`, and `test-results/`. If new generated directories appear, add them to the ignores in `eslint.config.js`.

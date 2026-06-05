@@ -1,40 +1,36 @@
-import { renderHook } from '@testing-library/react';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { useInteractiveBlocks } from '../useInteractiveBlocks';
 import { resetLoadedModules } from '../../lib/loadScriptModule';
+import { resetServerData } from '../../lib/injectServerData';
 import { createRef } from 'react';
+
+function fireLoadOnPendingScripts() {
+  const scripts = document.head.querySelectorAll('script[type="module"]');
+  for (const script of scripts) {
+    script.dispatchEvent(new Event('load'));
+  }
+}
 
 describe('useInteractiveBlocks', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     resetLoadedModules();
+    resetServerData();
     document.head.innerHTML = '';
   });
 
-  it('does nothing when disabled', () => {
-    const ref = createRef<HTMLDivElement>();
-    const { result } = renderHook(() =>
-      useInteractiveBlocks({
-        wpBaseUrl: 'https://example.com',
-        containerRef: ref,
-        enabled: false,
-      })
-    );
-
-    expect(result.current.loaded).toBe(false);
-    expect(result.current.error).toBeNull();
-    expect(
-      document.head.querySelectorAll('script[type="module"]').length
-    ).toBe(0);
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('marks loaded when no blocks are needed', () => {
     const ref = createRef<HTMLDivElement>();
     const { result } = renderHook(() =>
       useInteractiveBlocks({
-        wpBaseUrl: 'https://example.com',
+        basePath: '/interactivity/',
         blocks: [],
         containerRef: ref,
-        enabled: true,
       })
     );
 
@@ -42,42 +38,79 @@ describe('useInteractiveBlocks', () => {
     expect(result.current.error).toBeNull();
   });
 
-  it('loads runtime and block scripts when blocks specified', async () => {
+  it('loads the single interactivity bundle for interactive blocks', async () => {
     const ref = createRef<HTMLDivElement>();
     renderHook(() =>
       useInteractiveBlocks({
-        wpBaseUrl: 'https://example.com',
+        basePath: '/interactivity/',
         blocks: ['core/image'],
         containerRef: ref,
-        enabled: true,
       })
     );
 
-    const scripts = document.head.querySelectorAll('script[type="module"]');
-    expect(scripts.length).toBeGreaterThanOrEqual(1);
+    await act(async () => { vi.advanceTimersByTime(10); });
 
-    const srcs = Array.from(scripts).map((s) => s.getAttribute('src'));
-    expect(srcs).toContain(
-      'https://example.com/wp-includes/js/dist/script-modules/interactivity/index.min.js'
+    const moduleScript = document.head.querySelector('script[type="module"]');
+    expect(moduleScript).toBeTruthy();
+    expect(moduleScript!.getAttribute('src')).toBe(
+      '/interactivity/interactivity.js'
     );
   });
 
-  it('loads router when core/query is present', () => {
+  it('loads the same single bundle regardless of which blocks are present', async () => {
     const ref = createRef<HTMLDivElement>();
     renderHook(() =>
       useInteractiveBlocks({
-        wpBaseUrl: 'https://example.com',
-        blocks: ['core/query'],
+        basePath: '/interactivity/',
+        blocks: ['core/accordion', 'core/image', 'core/gallery'],
         containerRef: ref,
-        enabled: true,
       })
     );
 
-    const scripts = document.head.querySelectorAll('script[type="module"]');
-    const srcs = Array.from(scripts).map((s) => s.getAttribute('src'));
+    await act(async () => { vi.advanceTimersByTime(10); });
+    await act(async () => { fireLoadOnPendingScripts(); });
 
-    expect(srcs).toContain(
-      'https://example.com/wp-includes/js/dist/script-modules/interactivity/index.min.js'
+    const allScripts = document.head.querySelectorAll('script[type="module"]');
+    expect(allScripts.length).toBe(1);
+    expect(allScripts[0].getAttribute('src')).toBe(
+      '/interactivity/interactivity.js'
     );
+  });
+
+  it('filters out unsupported blocks and still loads bundle', async () => {
+    const ref = createRef<HTMLDivElement>();
+    renderHook(() =>
+      useInteractiveBlocks({
+        basePath: '/interactivity/',
+        blocks: ['core/paragraph', 'core/query', 'core/accordion'],
+        containerRef: ref,
+      })
+    );
+
+    await act(async () => { vi.advanceTimersByTime(10); });
+    await act(async () => { fireLoadOnPendingScripts(); });
+
+    const allScripts = document.head.querySelectorAll('script[type="module"]');
+    expect(allScripts.length).toBe(1);
+    expect(allScripts[0].getAttribute('src')).toBe(
+      '/interactivity/interactivity.js'
+    );
+  });
+
+  it('does not load bundle when only unsupported blocks present', async () => {
+    const ref = createRef<HTMLDivElement>();
+    const { result } = renderHook(() =>
+      useInteractiveBlocks({
+        basePath: '/interactivity/',
+        blocks: ['core/paragraph', 'core/query'],
+        containerRef: ref,
+      })
+    );
+
+    await act(async () => { vi.advanceTimersByTime(10); });
+
+    const allScripts = document.head.querySelectorAll('script[type="module"]');
+    expect(allScripts.length).toBe(0);
+    expect(result.current.loaded).toBe(true);
   });
 });
