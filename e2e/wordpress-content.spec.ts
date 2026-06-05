@@ -96,6 +96,50 @@ test.describe('WordPress content rendering', () => {
     await expect(lightboxOverlay).not.toBeVisible({ timeout: 5_000 });
   });
 
+  test('interactivity works after content re-render (post 1 → 2 → 1)', async ({ page }) => {
+    await page.getByTestId('wp-load-button').click();
+    await expect(page.getByTestId('gutenberg-renderer')).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await waitForInteractivityHydration(page);
+
+    const accordion1 = page
+      .locator('.wp-block-accordion-heading button')
+      .first();
+    await expect(accordion1).toBeVisible();
+    await accordion1.click();
+    await expect(accordion1).toHaveAttribute('aria-expanded', 'true', {
+      timeout: 5_000,
+    });
+    await accordion1.click();
+    await expect(accordion1).toHaveAttribute('aria-expanded', 'false', {
+      timeout: 5_000,
+    });
+
+    const postIdInput = page.getByTestId('wp-post-id-input');
+    await postIdInput.fill('2');
+
+    await page.waitForTimeout(2_000);
+
+    await postIdInput.fill('1');
+
+    await expect(page.getByTestId('gutenberg-renderer')).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await waitForInteractivityHydration(page);
+
+    const accordion2 = page
+      .locator('.wp-block-accordion-heading button')
+      .first();
+    await expect(accordion2).toBeVisible({ timeout: 10_000 });
+    await accordion2.click();
+    await expect(accordion2).toHaveAttribute('aria-expanded', 'true', {
+      timeout: 5_000,
+    });
+  });
+
   test('interactivity scripts are loaded and hydrate the DOM', async ({
     page,
   }) => {

@@ -113,4 +113,36 @@ describe('useInteractiveBlocks', () => {
     expect(allScripts.length).toBe(0);
     expect(result.current.loaded).toBe(true);
   });
+
+  it('reloads the bundle when blocks change (content re-render)', async () => {
+    const ref = createRef<HTMLDivElement>();
+    let blocks = ['core/image'];
+
+    const { rerender } = renderHook(() =>
+      useInteractiveBlocks({
+        basePath: '/interactivity/',
+        blocks,
+        containerRef: ref,
+      })
+    );
+
+    await act(async () => { vi.advanceTimersByTime(10); });
+    await act(async () => { fireLoadOnPendingScripts(); });
+
+    const scriptsBefore = document.head.querySelectorAll('script[type="module"]');
+    expect(scriptsBefore.length).toBe(1);
+    expect(scriptsBefore[0].getAttribute('src')).toBe(
+      '/interactivity/interactivity.js'
+    );
+
+    blocks = ['core/accordion', 'core/image'];
+    rerender();
+
+    await act(async () => { vi.advanceTimersByTime(10); });
+
+    const scriptsAfter = document.head.querySelectorAll('script[type="module"]');
+    const lastScript = scriptsAfter[scriptsAfter.length - 1];
+    expect(lastScript.getAttribute('src')).toContain('/interactivity/interactivity.js');
+    expect(lastScript.getAttribute('src')).toContain('?v=');
+  });
 });

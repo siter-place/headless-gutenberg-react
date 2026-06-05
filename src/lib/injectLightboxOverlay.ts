@@ -1,8 +1,6 @@
 const OVERLAY_CLASS = 'wp-lightbox-overlay';
 const STYLE_ID = 'siter-lightbox-css';
 
-let overlayInjected = false;
-
 const CLOSE_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="m13.06 12 6.47-6.47-1.06-1.06L12 10.94 5.53 4.47 4.47 5.53 10.94 12l-6.47 6.47 1.06 1.06L12 13.06l6.47 6.47 1.06-1.06L13.06 12Z"></path></svg>';
 
@@ -378,12 +376,9 @@ function buildOverlayHtml(): string {
 }
 
 export function injectLightboxOverlay(container: HTMLElement): void {
-  if (typeof document === 'undefined' || overlayInjected) return;
+  if (typeof document === 'undefined') return;
   if (!hasLightboxImages(container)) return;
-  if (document.querySelector(`.${OVERLAY_CLASS}`)) {
-    overlayInjected = true;
-    return;
-  }
+  if (document.querySelector(`.${OVERLAY_CLASS}`)) return;
 
   injectLightboxCss();
 
@@ -393,11 +388,9 @@ export function injectLightboxOverlay(container: HTMLElement): void {
   if (overlay) {
     document.body.appendChild(overlay);
   }
-  overlayInjected = true;
 }
 
 export function resetLightboxOverlay(): void {
-  overlayInjected = false;
   const existing = document.querySelector(`.${OVERLAY_CLASS}`);
   if (existing) existing.remove();
   const style = document.getElementById(STYLE_ID);

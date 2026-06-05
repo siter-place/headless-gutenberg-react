@@ -1,7 +1,5 @@
 const SCRIPT_ID = 'wp-script-module-data-@wordpress/interactivity';
 
-let injected = false;
-
 interface ImageMetadata {
   uploadedSrc: string;
   figureStyles: string;
@@ -72,7 +70,10 @@ function extractImageMetadata(
 }
 
 export function injectServerData(container: HTMLElement): void {
-  if (typeof document === 'undefined' || injected) return;
+  if (typeof document === 'undefined') return;
+
+  const existing = document.getElementById(SCRIPT_ID);
+  if (existing) existing.remove();
 
   const metadata = extractImageMetadata(container);
 
@@ -97,11 +98,9 @@ export function injectServerData(container: HTMLElement): void {
   script.id = SCRIPT_ID;
   script.textContent = JSON.stringify(serverData);
   document.head.appendChild(script);
-  injected = true;
 }
 
 export function resetServerData(): void {
-  injected = false;
   const existing = document.getElementById(SCRIPT_ID);
   if (existing) existing.remove();
 }

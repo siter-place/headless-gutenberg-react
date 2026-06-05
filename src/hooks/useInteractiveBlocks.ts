@@ -74,6 +74,9 @@ export function useInteractiveBlocks(
       return;
     }
 
+    stateRef.current = IDLE;
+    notify();
+
     let cancelled = false;
 
     async function load() {
@@ -101,8 +104,6 @@ export function useInteractiveBlocks(
       }
     }
 
-    // Defer so the DOM is stable after React's render cycle
-    // (prevents race with StrictMode's unmount/remount)
     const timerId = setTimeout(() => {
       if (!cancelled) load();
     }, 0);
